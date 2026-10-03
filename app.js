@@ -175,11 +175,11 @@ function openInGoogleMaps(loc) {
 }
 
 function whatsappMessage(loc) {
-  const lines = [`📍 ${loc.name}`];
-  if (loc.address) lines.push(loc.address);
-  lines.push(`Location: ${googleMapsLink(loc)}`);
-  if (loc.notes) lines.push(`Note: ${loc.notes}`);
-  return lines.join("\n");
+  // Send ONLY the link — no name/address lines above it. WhatsApp
+  // auto-generates a single map preview card from the link itself,
+  // the same way it does when you paste any Google Maps link, so the
+  // chat shows one tappable card instead of text plus a separate card.
+  return googleMapsLink(loc);
 }
 
 function sendOnWhatsapp(loc) {
