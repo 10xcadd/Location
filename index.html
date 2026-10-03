@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Delivery Location Sender</title>
+<meta name="description" content="Save exact pins for your regular delivery destinations and send them on WhatsApp in one tap." />
+<meta name="theme-color" content="#1F4B3F" />
+
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+
+<!-- ============ TOP BAR ============ -->
+<header class="topbar">
+  <div class="topbar-title">
+    <span class="pin-mark">&#128205;</span>
+    <h1>Delivery Locations</h1>
+  </div>
+  <button id="manageBtn" class="icon-btn" title="Manage locations" aria-label="Manage locations">&#9881;</button>
+</header>
+
+<!-- ============ CONNECTION BANNER ============ -->
+<div id="connBanner" class="conn-banner hidden" role="status"></div>
+
+<!-- ============ HOME SCREEN ============ -->
+<main id="homeScreen" class="screen">
+
+  <section class="search-wrap">
+    <input id="searchInput" type="search" inputmode="search" placeholder="Search college, institute or place..." autocomplete="off" />
+  </section>
+
+  <section class="filter-row" id="categoryFilters" aria-label="Filter by category">
+    <button class="chip is-active" data-cat="all">All</button>
+    <button class="chip" data-cat="College">College</button>
+    <button class="chip" data-cat="School">School</button>
+    <button class="chip" data-cat="Office">Office</button>
+    <button class="chip" data-cat="Shop">Shop</button>
+    <button class="chip" data-cat="Hospital">Hospital</button>
+    <button class="chip" data-cat="Residential">Residential</button>
+    <button class="chip" data-cat="Other">Other</button>
+  </section>
+
+  <h2 class="section-label" id="listLabel">Frequently Used Locations</h2>
+
+  <div id="locationList" class="location-list"></div>
+
+  <div id="emptyState" class="empty-state hidden">
+    <p class="empty-title">No locations yet</p>
+    <p class="empty-body">Add your first delivery destination to start sending pins on WhatsApp.</p>
+    <button class="btn btn-primary" id="emptyAddBtn">+ Add a location</button>
+  </div>
+
+  <div id="liveSearchSection" class="hidden">
+    <h2 class="section-label">More Places</h2>
+    <p class="live-search-hint">Not saved yet &mdash; results from the map. Save any of these to find them instantly next time.</p>
+    <div id="liveSearchList" class="location-list"></div>
+    <p id="liveSearchStatus" class="live-search-status hidden"></p>
+  </div>
+
+</main>
+
+<button id="fabAdd" class="fab" title="Add location" aria-label="Add location">+</button>
+
+<!-- ============ LOCATION DETAILS SCREEN ============ -->
+<div id="detailsScreen" class="screen overlay-screen hidden">
+  <header class="subbar">
+    <button class="icon-btn back-btn" data-close="detailsScreen" aria-label="Back">&#8592;</button>
+    <h2 id="detailsName">Location</h2>
+    <button class="icon-btn" id="detailsEditBtn" aria-label="Edit">&#9998;</button>
+  </header>
+  <div class="screen-body">
+    <p class="details-category" id="detailsCategory"></p>
+    <p class="details-address" id="detailsAddress"></p>
+
+    <div class="coord-box">
+      <div><span class="coord-label">Latitude</span><span id="detailsLat">-</span></div>
+      <div><span class="coord-label">Longitude</span><span id="detailsLng">-</span></div>
+    </div>
+
+    <p class="details-notes" id="detailsNotes"></p>
+
+    <div class="action-grid">
+      <button class="btn btn-map" id="detailsMapBtn">&#128205; Open Google Maps</button>
+      <button class="btn btn-whatsapp" id="detailsWhatsappBtn">&#128242; Send on WhatsApp</button>
+      <button class="btn btn-secondary" id="detailsCopyBtn">&#128203; Copy Location Link</button>
+      <button class="btn btn-danger" id="detailsDeleteBtn">&#128465; Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MANAGE LOCATIONS SCREEN ============ -->
+<div id="manageScreen" class="screen overlay-screen hidden">
+  <header class="subbar">
+    <button class="icon-btn back-btn" data-close="manageScreen" aria-label="Back">&#8592;</button>
+    <h2>Manage Locations</h2>
+    <button class="icon-btn" id="manageAddBtn" aria-label="Add location">+</button>
+  </header>
+  <div class="screen-body">
+    <div class="manage-toolbar">
+      <button class="btn btn-secondary btn-sm" id="importBtn">&#8593; Import CSV</button>
+      <button class="btn btn-secondary btn-sm" id="exportBtn">&#8595; Export CSV</button>
+      <input type="file" id="importFile" accept=".csv" class="hidden" />
+    </div>
+    <div id="manageList" class="location-list"></div>
+  </div>
+</div>
+
+<!-- ============ ADD / EDIT LOCATION FORM ============ -->
+<div id="formScreen" class="screen overlay-screen hidden">
+  <header class="subbar">
+    <button class="icon-btn back-btn" data-close="formScreen" aria-label="Cancel">&#8592;</button>
+    <h2 id="formTitle">Add Location</h2>
+    <span class="icon-btn-spacer"></span>
+  </header>
+  <div class="screen-body">
+    <form id="locationForm">
+      <input type="hidden" id="formId" />
+
+      <label class="field">
+        <span>Location Name *</span>
+        <input type="text" id="formName" required placeholder="e.g. Maharashtra College" />
+      </label>
+
+      <label class="field">
+        <span>Short Name</span>
+        <input type="text" id="formShortName" placeholder="e.g. Maharashtra Coll." />
+      </label>
+
+      <label class="field">
+        <span>Address</span>
+        <textarea id="formAddress" rows="2" placeholder="Full address"></textarea>
+      </label>
+
+      <button type="button" class="btn btn-secondary" id="pickOnMapBtn">&#128205; Pick Location From Map</button>
+
+      <div class="coord-fields">
+        <label class="field">
+          <span>Latitude</span>
+          <input type="number" step="any" id="formLat" placeholder="19.xxxxx" />
+        </label>
+        <label class="field">
+          <span>Longitude</span>
+          <input type="number" step="any" id="formLng" placeholder="72.xxxxx" />
+        </label>
+      </div>
+      <p class="hint" id="coordHint">No coordinates yet &mdash; pick the exact spot on the map for an accurate pin.</p>
+
+      <label class="field">
+        <span>Category</span>
+        <select id="formCategory">
+          <option>College</option>
+          <option>School</option>
+          <option>Office</option>
+          <option>Shop</option>
+          <option>Hospital</option>
+          <option>Residential</option>
+          <option>Other</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Notes</span>
+        <textarea id="formNotes" rows="2" placeholder="Landmark, gate number, floor, etc. (optional)"></textarea>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save Location</button>
+        <button type="button" class="btn btn-secondary" data-close="formScreen">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ MAP PICKER MODAL ============ -->
+<div id="mapPickerScreen" class="screen overlay-screen hidden">
+  <header class="subbar">
+    <button class="icon-btn back-btn" id="mapPickerCancel" aria-label="Cancel">&#8592;</button>
+    <h2>Pick Exact Location</h2>
+    <span class="icon-btn-spacer"></span>
+  </header>
+  <div class="map-picker-body">
+    <div class="map-search-wrap">
+      <input type="text" id="mapSearchInput" placeholder="Search for a place..." />
+      <button id="mapSearchBtn" class="btn btn-secondary btn-sm">Search</button>
+    </div>
+    <div id="pickerMap" class="picker-map"></div>
+    <p class="hint">Tap or drag the pin to the exact spot, then confirm.</p>
+    <div class="map-coord-readout">
+      <span id="pickerLatLabel">Lat: -</span>
+      <span id="pickerLngLabel">Lng: -</span>
+    </div>
+    <button class="btn btn-primary" id="confirmPinBtn">Confirm This Location</button>
+  </div>
+</div>
+
+<!-- ============ TOAST ============ -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="firebase.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
